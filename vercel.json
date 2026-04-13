@@ -1,0 +1,17 @@
+{
+    "version": 2,
+    "rewrites": [
+        {
+            "source": "/(.*\\.svg)",
+            "destination": "/$1"
+        },
+        {
+            "source": "/(.*\\.png)",
+            "destination": "/$1"
+        },
+        {
+            "source": "/(.*)",
+            "destination": "/index.html"
+        }
+    ]
+}

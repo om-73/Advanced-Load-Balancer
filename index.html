@@ -1,0 +1,1287 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Load Balancer v4.0</title>
+    <link rel="icon" type="image/svg+xml" href="/logo.svg">
+    <link rel="icon" type="image/png" href="/logo.png">
+    <link rel="shortcut icon" href="/logo.png">
+    <link rel="apple-touch-icon" href="/logo.png">
+    <link
+        href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,700;1,400&family=Rajdhani:wght@500;600;700&family=Exo+2:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --bg: #0a0f1e;
+            --bg2: #0f1729;
+            --bg3: #131e35;
+            --card: #141d30;
+            --card2: #111827;
+            --border: #1d2e48;
+            --border2: #243552;
+            --cyan: #00cfff;
+            --green: #00e676;
+            --green2: #00c853;
+            --yellow: #ffc107;
+            --blue: #3d8bff;
+            --purple: #9c27b0;
+            --red: #ff3d3d;
+            --text: #c5d6f0;
+            --dim: #5a7a9e;
+            --mono: 'JetBrains Mono', monospace;
+            --title: 'Rajdhani', sans-serif;
+            --body: 'Exo 2', sans-serif;
+        }
+
+        html,
+        body {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: var(--body);
+            background: var(--bg);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        /* ══ NAVBAR ══ */
+        .navbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            height: 50px;
+            background: #090e1c;
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+            z-index: 10;
+        }
+
+        .nav-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-logo {
+            width: 32px;
+            height: 32px;
+            border-radius: 4px;
+            object-fit: contain;
+        }
+
+        .nav-title {
+            font-family: var(--title);
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: #ddeeff;
+            letter-spacing: .3px;
+        }
+
+        .nav-title em {
+            color: var(--dim);
+            font-style: normal;
+            font-weight: 400;
+        }
+
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .nbadge {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 13px;
+            border-radius: 20px;
+            font-family: var(--title);
+            font-size: .78rem;
+            font-weight: 700;
+            letter-spacing: .5px;
+            cursor: default;
+        }
+
+        .nb-green {
+            background: rgba(0, 230, 118, .12);
+            border: 1px solid #00e676;
+            color: #00e676;
+        }
+
+        .nb-blue {
+            background: rgba(61, 139, 255, .12);
+            border: 1px solid #3d8bff;
+            color: #7bbfff;
+        }
+
+        @keyframes warnPulse {
+
+            0%,
+            100% {
+                box-shadow: 0 0 0 rgba(255, 193, 7, 0);
+            }
+
+            50% {
+                box-shadow: 0 0 10px rgba(255, 193, 7, 0.3);
+            }
+        }
+
+        .source-selector {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-right: 15px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            padding: 2px 10px;
+            border-radius: 6px;
+        }
+
+        .source-selector select,
+        .source-selector input {
+            background: none;
+            border: none;
+            color: var(--cyan);
+            font-family: var(--title);
+            font-size: 0.75rem;
+            outline: none;
+            font-weight: 600;
+        }
+
+        .source-selector input {
+            border-left: 1px solid var(--border);
+            padding-left: 10px;
+            color: var(--text);
+            width: 200px;
+        }
+
+        .bdot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .bdot-green {
+            background: #00e676;
+            box-shadow: 0 0 5px #00e676;
+        }
+
+        .nav-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--bg3);
+            border: 1px solid var(--border2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--dim);
+            font-size: .9rem;
+            cursor: pointer;
+            margin-left: 4px;
+        }
+
+        /* ══ BODY LAYOUT ══ */
+        .layout {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* ══ TOP PANELS (3 col) ══ */
+        .top-panels {
+            display: grid;
+            grid-template-columns: 240px 240px 1fr;
+            gap: 12px;
+            padding: 12px 14px 6px;
+            flex-shrink: 0;
+        }
+
+        /* ══ BOTTOM PANELS (2 col) ══ */
+        .mid-panels {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            padding: 6px 14px 6px;
+            flex: 1;
+            min-height: 0;
+        }
+
+        /* ══ TERMINAL ══ */
+        .terminal-wrap {
+            padding: 0 14px 10px;
+            flex-shrink: 0;
+            height: 170px;
+        }
+
+        /* ══ CARD BASE ══ */
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 14px 16px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(0, 207, 255, .15), transparent);
+        }
+
+        .card-hdr {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            flex-shrink: 0;
+        }
+
+        .card-title {
+            font-family: var(--title);
+            font-size: .8rem;
+            font-weight: 600;
+            letter-spacing: 1.2px;
+            text-transform: uppercase;
+            color: var(--text);
+        }
+
+        .card-menu {
+            color: var(--dim);
+            font-size: .9rem;
+            letter-spacing: 2px;
+            cursor: pointer;
+            line-height: 1;
+        }
+
+        /* ══ RPS SPEEDOMETER ══ */
+        .rps-card {
+            justify-content: space-between;
+        }
+
+        .spd-wrap {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+        }
+
+        .spd-svg {
+            width: 180px;
+            height: 106px;
+        }
+
+        .spd-val {
+            font-family: var(--title);
+            font-size: 1.9rem;
+            font-weight: 700;
+            color: #fff;
+            text-align: center;
+            line-height: 1;
+            margin-top: -2px;
+        }
+
+        .spd-stats {
+            display: flex;
+            gap: 18px;
+            justify-content: center;
+            margin-top: 6px;
+        }
+
+        .spd-stat {
+            font-family: var(--mono);
+            font-size: .68rem;
+            color: var(--dim);
+        }
+
+        .spd-stat strong {
+            color: var(--text);
+        }
+
+        /* ══ SYSTEM HEALTH ══ */
+        .health-wrap {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+        }
+
+        .hlth-svg {
+            width: 190px;
+            height: 108px;
+        }
+
+        .hlth-val {
+            text-align: center;
+            margin-top: -4px;
+        }
+
+        .hlth-pct {
+            font-family: var(--title);
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #00e676;
+            display: block;
+            line-height: 1;
+        }
+
+        .hlth-lbl {
+            font-size: .72rem;
+            color: #00c853;
+            display: block;
+            margin-top: 1px;
+        }
+
+        .hlth-stats {
+            display: flex;
+            gap: 14px;
+            justify-content: center;
+            margin-top: 8px;
+        }
+
+        .hlth-stat {
+            font-family: var(--mono);
+            font-size: .68rem;
+            color: var(--dim);
+        }
+
+        .hlth-stat strong {
+            color: var(--text);
+        }
+
+        /* ══ TRAFFIC FLOW ══ */
+        .traffic-card {
+            padding: 12px 14px 10px;
+        }
+
+        .chart-outer {
+            flex: 1;
+            display: flex;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .chart-yl {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: flex-end;
+            padding: 4px 6px 22px 0;
+        }
+
+        .yl {
+            font-family: var(--mono);
+            font-size: .6rem;
+            color: var(--dim);
+        }
+
+        .chart-inner {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .bars-row {
+            flex: 1;
+            display: flex;
+            align-items: flex-end;
+            gap: 5px;
+            position: relative;
+            padding-bottom: 24px;
+        }
+
+        /* grid lines */
+        .bars-row::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            bottom: 24px;
+            background: repeating-linear-gradient(to top,
+                    rgba(29, 46, 72, .6) 0, rgba(29, 46, 72, .6) 1px, transparent 1px, transparent 25%);
+            pointer-events: none;
+        }
+
+        .bgrp {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 3px;
+            height: 100%;
+        }
+
+        .bar {
+            width: 100%;
+            border-radius: 3px 3px 0 0;
+            position: relative;
+            transition: height 1.4s cubic-bezier(.4, 0, .2, 1);
+        }
+
+        .bar-blue {
+            background: linear-gradient(180deg, rgba(61, 139, 255, .85), rgba(61, 139, 255, .3));
+            border-top: 1px solid rgba(61, 139, 255, .7);
+        }
+
+        .bar-green {
+            background: linear-gradient(180deg, rgba(0, 230, 118, .95), rgba(0, 180, 80, .35));
+            border-top: 1px solid rgba(0, 230, 118, .9);
+            box-shadow: 0 0 14px rgba(0, 230, 118, .35);
+        }
+
+        .bval {
+            position: absolute;
+            top: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: var(--mono);
+            font-size: .58rem;
+            color: #aaccee;
+            white-space: nowrap;
+        }
+
+        .blbl {
+            font-family: var(--mono);
+            font-size: .55rem;
+            color: var(--dim);
+            text-align: center;
+            line-height: 1.3;
+            white-space: pre;
+        }
+
+        .blbl.hl {
+            color: #00e676;
+        }
+
+        .hi-load {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            background: rgba(0, 20, 12, .92);
+            border: 1px solid var(--green);
+            border-radius: 6px;
+            padding: 5px 11px;
+            display: none;
+            /* Shown via JS */
+            align-items: center;
+            gap: 6px;
+            font-family: var(--title);
+            font-size: .82rem;
+            font-weight: 700;
+            color: var(--green);
+            box-shadow: 0 0 14px rgba(0, 230, 118, .2);
+        }
+
+        /* ══ CODE EDITOR ══ */
+        .code-card {
+            padding: 12px 16px 10px;
+        }
+
+        .code-hdr-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .code-fname {
+            font-family: var(--mono);
+            font-size: .82rem;
+            color: var(--text);
+            border-bottom: 2px solid var(--cyan);
+            padding-bottom: 6px;
+            display: inline-block;
+            flex-shrink: 0;
+        }
+
+        .code-body {
+            flex: 1;
+            overflow-y: auto;
+            font-family: var(--mono);
+            font-size: .78rem;
+            line-height: 1.9;
+            background: #0D1117;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid var(--border2);
+            outline: none;
+            color: #c5d6f0;
+        }
+
+        .code-body::-webkit-scrollbar {
+            width: 3px;
+        }
+
+        .code-body::-webkit-scrollbar-thumb {
+            background: var(--border2);
+            border-radius: 2px;
+        }
+
+        .cl {
+            display: flex;
+            gap: 14px;
+        }
+
+        .ln {
+            color: #2e4560;
+            min-width: 18px;
+            text-align: right;
+            user-select: none;
+            flex-shrink: 0;
+        }
+
+        .kw {
+            color: #7986cb;
+        }
+
+        .cn {
+            color: #80cbc4;
+        }
+
+        .fn {
+            color: #82b1ff;
+        }
+
+        .st {
+            color: #c3e88d;
+        }
+
+        .pu {
+            color: #c5d6f0;
+        }
+
+        .cm {
+            color: #455a64;
+        }
+
+        /* ══ PORT SCANNER ══ */
+        .scanner-card {
+            padding: 12px 16px 10px;
+        }
+
+        .sc-inputs {
+            display: grid;
+            grid-template-columns: 2fr 1.5fr 1fr;
+            gap: 10px;
+            margin-bottom: 10px;
+            flex-shrink: 0;
+        }
+
+        .sc-grp label {
+            display: block;
+            font-family: var(--mono);
+            font-size: .6rem;
+            color: var(--dim);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        .sc-field {
+            width: 100%;
+            background: #0a1020;
+            border: 1px solid var(--border2);
+            border-radius: 5px;
+            padding: 6px 9px;
+            color: var(--text);
+            font-family: var(--mono);
+            font-size: .78rem;
+            outline: none;
+            transition: border-color .2s;
+        }
+
+        .sc-field:focus {
+            border-color: var(--cyan);
+        }
+
+        .sc-actions {
+            display: grid;
+            grid-template-columns: 1fr 1.5fr;
+            gap: 10px;
+            margin-bottom: 10px;
+            flex-shrink: 0;
+        }
+
+        .btn {
+            padding: 8px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-family: var(--title);
+            font-size: .88rem;
+            font-weight: 700;
+            letter-spacing: .8px;
+            transition: all .2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-scan {
+            background: #1b2b42;
+            color: var(--text);
+            border: 1px solid var(--border2);
+        }
+
+        .btn-scan:hover {
+            background: #223550;
+        }
+
+        .btn-load {
+            background: #0f2e1e;
+            color: var(--green);
+            border: 1px solid #1e5c38;
+        }
+
+        .btn-load:hover {
+            background: #143825;
+        }
+
+        /* Dot visualizer */
+        .dot-viz {
+            height: 60px;
+            background: #080e1a;
+            border-radius: 7px;
+            display: flex;
+            align-items: flex-end;
+            padding: 6px 8px;
+            gap: 3px;
+            overflow: hidden;
+            flex-shrink: 0;
+            margin-bottom: 8px;
+            position: relative;
+        }
+
+        /* scan output */
+        .sc-out {
+            flex: 1;
+            background: #060d18;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 8px 10px;
+            font-family: var(--mono);
+            font-size: .74rem;
+            line-height: 2;
+            overflow-y: auto;
+            min-height: 0;
+        }
+
+        .sc-out::-webkit-scrollbar {
+            width: 3px;
+        }
+
+        .sc-out::-webkit-scrollbar-thumb {
+            background: var(--border2);
+        }
+
+        .so-dim {
+            color: var(--dim);
+        }
+
+        .so-green {
+            color: #00e676;
+        }
+
+        .so-red {
+            color: #ff3d3d;
+        }
+
+        /* ══ TERMINAL ══ */
+        .term-card {
+            background: #0a1020;
+            border: 1px solid var(--border2);
+            border-radius: 10px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .term-hdr {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 14px;
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+            background: #0d1525;
+        }
+
+        .term-title {
+            font-family: var(--title);
+            font-size: .82rem;
+            font-weight: 600;
+            letter-spacing: 1.5px;
+            color: #9abcde;
+        }
+
+        .term-btns {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .term-btn {
+            background: none;
+            border: none;
+            color: var(--dim);
+            font-size: .78rem;
+            cursor: pointer;
+            padding: 0 2px;
+        }
+
+        .term-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px 14px;
+            font-family: var(--mono);
+            font-size: .72rem;
+            line-height: 1.85;
+        }
+
+        .tl {
+            display: flex;
+            gap: 6px;
+        }
+
+        .ts {
+            color: #3a5a7a;
+            flex-shrink: 0;
+        }
+
+        .ti {
+            color: #82b1ff;
+        }
+
+        /* INFO */
+        .tw {
+            color: #ffc107;
+        }
+
+        /* WARN */
+        .td {
+            color: #80cbc4;
+        }
+
+        /* DEBUG */
+        .te {
+            color: #ff5252;
+        }
+
+        /* ERROR */
+        .tn {
+            color: var(--text);
+        }
+
+        .spinner {
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- NAVBAR -->
+    <nav class="navbar">
+        <div class="nav-left">
+            <img src="/logo.svg" alt="Logo" class="nav-logo">
+            <span class="nav-title">Advanced Load Balancer <em>(v4.0)</em></span>
+        </div>
+        <div class="nav-right">
+            <!-- Source Selector -->
+            <div class="source-selector">
+                <select id="dataSource" onchange="updateDataSource()">
+                    <option value="local">LOCAL BACKEND</option>
+                    <option value="custom">REMOTE (RENDER/CLOUD)</option>
+                </select>
+                <input type="text" id="customSourceInput" value="https://load-balancer-1-xt61.onrender.com"
+                    placeholder="https://my-app.onrender.com" onchange="updateDataSource()" style="display: none;">
+            </div>
+
+            <div class="nbadge nb-green" id="connStatus"><span class="bdot bdot-green"></span>ACTIVE</div>
+            <div class="nbadge nb-blue">🔒 SECURE</div>
+            <div class="nav-avatar">👤 <span id="serverTime"
+                    style="margin-left: 5px; font-size: 0.7rem; color: var(--cyan);">--:--:--</span></div>
+        </div>
+    </nav>
+
+    <div class="layout">
+
+        <!-- TOP PANELS -->
+        <div class="top-panels">
+
+            <!-- RPS -->
+            <div class="card rps-card">
+                <div class="card-hdr">
+                    <span class="card-title">RPS (Requests Per Second)</span>
+                    <span class="card-menu">⋮</span>
+                </div>
+                <div class="spd-wrap">
+                    <svg class="spd-svg" viewBox="0 0 180 106" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <linearGradient id="arcGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                                <stop offset="0%" stop-color="#7c4dff" />
+                                <stop offset="50%" stop-color="#00cfff" />
+                                <stop offset="100%" stop-color="#00e676" />
+                            </linearGradient>
+                            <filter id="arcGlow">
+                                <feGaussianBlur stdDeviation="2.5" result="b" />
+                                <feMerge>
+                                    <feMergeNode in="b" />
+                                    <feMergeNode in="SourceGraphic" />
+                                </feMerge>
+                            </filter>
+                        </defs>
+                        <g id="rps-ticks"></g>
+                        <path d="M12,95 A78,78 0 0 1 168,95" fill="none" stroke="#162033" stroke-width="8"
+                            stroke-linecap="round" />
+                        <path d="M12,95 A78,78 0 0 1 168,95" fill="none" stroke="url(#arcGrad)" stroke-width="5"
+                            stroke-linecap="round" filter="url(#arcGlow)" opacity=".9" />
+                        <line id="rps-needle" x1="90" y1="95" x2="90" y2="22" stroke="white" stroke-width="2"
+                            stroke-linecap="round" style="transform-origin:90px 95px; transform: rotate(-90deg);" />
+                    </svg>
+                    <div class="spd-val" id="spdVal">0</div>
+                    <div class="spd-stats">
+                        <div class="spd-stat">TOTAL: <strong id="spdTotal">0</strong></div>
+                        <div class="spd-stat">PEAK: <strong id="spdPeak">0</strong></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SYSTEM HEALTH -->
+            <div class="card rps-card">
+                <div class="card-hdr">
+                    <span class="card-title">System Health</span>
+                    <span class="card-menu">⋮</span>
+                </div>
+                <div class="health-wrap">
+                    <svg class="hlth-svg" viewBox="0 0 190 108" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <linearGradient id="hlthGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                                <stop offset="0%" stop-color="#00e676" />
+                                <stop offset="100%" stop-color="#ff3d00" />
+                            </linearGradient>
+                            <filter id="hlthGlow">
+                                <feGaussianBlur stdDeviation="3" result="b" />
+                                <feMerge>
+                                    <feMergeNode in="b" />
+                                    <feMergeNode in="SourceGraphic" />
+                                </feMerge>
+                            </filter>
+                        </defs>
+                        <g id="hlth-ticks"></g>
+                        <path d="M12,98 A83,83 0 0 1 178,98" fill="none" stroke="#162033" stroke-width="10"
+                            stroke-linecap="round" />
+                        <path d="M12,98 A83,83 0 0 1 178,98" fill="none" stroke="url(#hlthGrad)" stroke-width="8"
+                            stroke-linecap="round" filter="url(#hlthGlow)" opacity=".95" />
+                        <line id="hlth-needle" x1="95" y1="98" x2="95" y2="22" stroke="white" stroke-width="2.5"
+                            stroke-linecap="round" style="transform-origin:95px 98px; transform: rotate(90deg);" />
+                    </svg>
+                    <div class="hlth-val">
+                        <span class="hlth-pct" id="hlthPct">100%</span>
+                        <span class="hlth-lbl" id="hlthLbl">(OPTIMAL)</span>
+                    </div>
+                    <div class="hlth-stats" id="hlthStatsRow">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- TRAFFIC FLOW -->
+            <div class="card traffic-card">
+                <div class="card-hdr">
+                    <span class="card-title">Traffic Flow</span>
+                    <span class="card-menu">⋮</span>
+                </div>
+                <div class="chart-outer">
+                    <div class="chart-yl">
+                        <span class="yl">250</span><span class="yl">200</span><span class="yl">150</span><span
+                            class="yl">100</span><span class="yl">50</span><span class="yl">0</span>
+                    </div>
+                    <div class="chart-inner">
+                        <div class="bars-row" id="barsRow"></div>
+                    </div>
+                    <div class="hi-load" id="highLoadBadge">
+                        <svg width="13" height="13" viewBox="0 0 14 12" fill="none">
+                            <rect x="0" y="6" width="3" height="6" fill="#00e676" rx="1" />
+                            <rect x="4.5" y="3" width="3" height="9" fill="#00e676" rx="1" />
+                            <rect x="9" y="0" width="3" height="12" fill="#00e676" rx="1" />
+                        </svg>
+                        HIGH LOAD
+                    </div>
+                </div>
+            </div>
+
+        </div><!-- /top-panels -->
+
+        <!-- MID PANELS -->
+        <div class="mid-panels">
+
+            <!-- CODE EDITOR -->
+            <div class="card code-card">
+                <div class="card-hdr-row">
+                    <span class="code-fname">CustomStrategy.java</span>
+                    <select id="stratTemplate" onchange="loadTemplate()"
+                        style="background:#0a1020; color:var(--text); border:1px solid var(--border2); border-radius:4px; font-size:0.75rem; padding:2px 5px;">
+                        <option value="round_robin">Round Robin</option>
+                        <option value="random">Random</option>
+                        <option value="consistent_hashing">Consistent Hashing</option>
+                        <option value="weighted">Weighted (9081 Priority)</option>
+                    </select>
+                </div>
+                <textarea class="code-body" id="stratCode" spellcheck="false"></textarea>
+                <button class="btn btn-load" id="uploadBtn" onclick="uploadStrategy()" style="margin-top:10px;">
+                    <span id="uploadSpinner" class="spinner" style="display:none;"></span>
+                    <span id="uploadBtnText">APPLY NEW STRATEGY</span>
+                </button>
+            </div>
+
+            <!-- PORT SCANNER -->
+            <div class="card scanner-card">
+                <div class="card-hdr">
+                    <span class="card-title">Utility Cluster</span>
+                    <span class="card-menu">⋮</span>
+                </div>
+                <div class="sc-inputs">
+                    <div class="sc-grp"><label>Target</label><input class="sc-field" type="text" value="google.com"
+                            id="scanHost" /></div>
+                    <div class="sc-grp"><label>Requests</label><input class="sc-field" type="number" value="1000"
+                            id="requests" /></div>
+                    <div class="sc-grp"><label>Threads</label><input class="sc-field" type="number" value="50"
+                            id="concurrency" /></div>
+                </div>
+                <div class="sc-actions">
+                    <button class="btn btn-scan" id="scanBtn" onclick="scanPorts()">SCAN PORTS</button>
+                    <button class="btn btn-load" id="loadBtn" onclick="runTest()">STRESS TEST</button>
+                </div>
+                <div class="dot-viz" id="dotViz"></div>
+                <div class="sc-out" id="scOut">
+                    <div class="so-dim">[IDLE] Waiting for command...</div>
+                </div>
+            </div>
+
+        </div><!-- /mid-panels -->
+
+        <!-- TERMINAL -->
+        <div class="terminal-wrap">
+            <div class="term-card">
+                <div class="term-hdr">
+                    <span class="term-title">SYSTEM ENGINE LOGS</span>
+                    <div class="term-btns">
+                        <button class="term-btn">─</button><button class="term-btn">□</button><button
+                            class="term-btn">✕</button>
+                    </div>
+                </div>
+                <div class="term-body" id="termBody"></div>
+            </div>
+        </div>
+
+    </div><!-- /layout -->
+
+    <script>
+        // --- Core API Config ---
+        let isConnected = true;
+        let apiBase = "/api/";
+        let peakRPS = 0;
+
+        // --- Multi-Environment Support ---
+        function updateDataSource() {
+            const select = document.getElementById('dataSource');
+            const input = document.getElementById('customSourceInput');
+            if (select.value === 'custom') {
+                input.style.display = 'block';
+                apiBase = input.value.endsWith('/') ? input.value : input.value + '/';
+            } else {
+                input.style.display = 'none';
+                apiBase = window.location.hostname === 'localhost' ? '/' : '/api/';
+            }
+            console.log("📍 API Base set to:", apiBase);
+            fetchStats();
+        }
+
+        function checkEnvironment() {
+            const hostname = window.location.hostname;
+            if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
+                console.log("☁️ Cloud Environment Detected");
+                const select = document.getElementById('dataSource');
+                select.value = 'custom';
+                updateDataSource();
+            } else {
+                apiBase = "/";
+            }
+        }
+
+        async function fetchLocalIp() {
+            try {
+                const res = await fetch(apiBase + 'network-ip', { method: 'POST' });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.ip) console.log("📍 Detected Local IP:", data.ip);
+                }
+            } catch (e) { }
+        }
+
+        // --- Visual Helpers ---
+        function setNeedle(id, deg) {
+            const el = document.getElementById(id);
+            if (el) el.style.transform = `rotate(${deg}deg)`;
+        }
+
+        (function buildTicks() {
+            // RPS Ticks
+            const rpsG = document.getElementById('rps-ticks');
+            for (let i = 0; i <= 30; i++) {
+                const ang = -180 + i * (180 / 30);
+                const rad = ang * Math.PI / 180;
+                const len = i % 5 === 0 ? 8 : 4;
+                const x1 = 90 + 75 * Math.cos(rad), y1 = 95 + 75 * Math.sin(rad);
+                const x2 = 90 + (75 - len) * Math.cos(rad), y2 = 95 + (75 - len) * Math.sin(rad);
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', x1); line.setAttribute('y1', y1);
+                line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+                line.setAttribute('stroke', '#3a4a63'); line.setAttribute('stroke-width', '1');
+                rpsG.appendChild(line);
+            }
+            // Health Ticks
+            const hlthG = document.getElementById('hlth-ticks');
+            for (let i = 0; i <= 20; i++) {
+                const ang = -180 + i * (180 / 20);
+                const rad = ang * Math.PI / 180;
+                const len = i % 4 === 0 ? 10 : 5;
+                const x1 = 95 + 80 * Math.cos(rad), y1 = 98 + 80 * Math.sin(rad);
+                const x2 = 95 + (80 - len) * Math.cos(rad), y2 = 98 + (80 - len) * Math.sin(rad);
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', x1); line.setAttribute('y1', y1);
+                line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+                line.setAttribute('stroke', '#3a4a63'); line.setAttribute('stroke-width', '1.5');
+                hlthG.appendChild(line);
+            }
+        })();
+
+        // --- App Logic ---
+        const TEMPLATES = {
+            "round_robin": `package com.loadbalancer;\nimport java.util.List;\n\npublic class CustomStrategy implements LoadBalancingStrategy {\n    private int counter = 0;\n\n    @Override\n    public BackendServer getNextServer(List<BackendServer> servers, String clientIp) {\n        if (servers.isEmpty()) return null;\n        return servers.get(counter++ % servers.size());\n    }\n}`,
+            "random": `package com.loadbalancer;\nimport java.util.List;\nimport java.util.Random;\n\npublic class CustomStrategy implements LoadBalancingStrategy {\n    private Random random = new Random();\n\n    @Override\n    public BackendServer getNextServer(List<BackendServer> servers, String clientIp) {\n        if (servers.isEmpty()) return null;\n        return servers.get(random.nextInt(servers.size()));\n    }\n}`,
+            "consistent_hashing": `package com.loadbalancer;\nimport java.util.List;\n\npublic class CustomStrategy implements LoadBalancingStrategy {\n    @Override\n    public BackendServer getNextServer(List<BackendServer> servers, String clientIp) {\n        if (servers.isEmpty()) return null;\n        int hash = Math.abs(clientIp.hashCode());\n        return servers.get(hash % servers.size());\n    }\n}`,
+            "weighted": `package com.loadbalancer;\nimport java.util.List;\n\npublic class CustomStrategy implements LoadBalancingStrategy {\n    private int counter = 0;\n    @Override\n    public BackendServer getNextServer(List<BackendServer> servers, String clientIp) {\n        if (servers.isEmpty()) return null;\n        counter++;\n        if (counter % 2 == 0) return servers.get(0);\n        return servers.get(counter % servers.size());\n    }\n}`
+        };
+
+        function loadTemplate() {
+            const val = document.getElementById('stratTemplate').value;
+            document.getElementById('stratCode').value = TEMPLATES[val];
+        }
+
+        async function fetchStats() {
+            if (!isConnected) return;
+            try {
+                // Ensure endpoints match the api/ directory structure
+                const url = apiBase === "/" ? "/stats" : (apiBase.endsWith('/') ? apiBase + "stats" : apiBase + "/stats");
+                const res = await fetch(url + '?t=' + Date.now());
+                if (!res.ok) throw new Error();
+                const data = await res.json();
+
+                if (data.server_time) {
+                    document.getElementById('serverTime').innerText = data.server_time;
+                }
+
+                updateUI(data);
+            } catch (e) {
+                document.getElementById('connStatus').innerHTML = '<span class="bdot" style="background:red"></span>OFFLINE';
+            }
+        }
+
+        function updateUI(data) {
+            // Gauges
+            const rps = data.rps || 0;
+            if (rps > peakRPS) peakRPS = rps;
+            document.getElementById('spdVal').innerText = Math.round(rps).toLocaleString();
+            document.getElementById('spdTotal').innerText = (data.total_requests || 0).toLocaleString();
+            document.getElementById('spdPeak').innerText = Math.round(peakRPS).toLocaleString();
+
+            // RPS Needle: -90 (0) to 90 (15000 max scale)
+            const rpsDeg = -90 + (Math.min(rps / 15000, 1) * 180);
+            setNeedle('rps-needle', rpsDeg);
+
+            // Health
+            const total = data.total_requests || 1;
+            const fails = data.failed_requests || 0;
+            const healthPct = Math.max(0, 100 - (fails / total * 100));
+            document.getElementById('hlthPct').innerText = Math.round(healthPct) + '%';
+            document.getElementById('hlthLbl').innerText = healthPct > 90 ? "(OPTIMAL)" : (healthPct > 70 ? "(STABLE)" : "(WARNING)");
+            document.getElementById('hlthPct').style.color = healthPct > 90 ? '#00e676' : (healthPct > 70 ? '#ffc107' : '#ff3d3d');
+
+            // Health Needle: 90 (0%) to -90 (100%) - swapped for aesthetic
+            const hlthDeg = 90 - (healthPct / 100 * 180);
+            setNeedle('hlth-needle', hlthDeg);
+
+            // Health Detail Row
+            const healthRow = document.getElementById('hlthStatsRow');
+            healthRow.innerHTML = `
+    <div class="hlth-stat">SUCCESS: <strong>${data.success_requests || 0}</strong></div>
+    <div class="hlth-stat">FAIL: <strong>${fails}</strong></div>
+    <div class="hlth-stat">BACKENDS: <strong>${Object.keys(data.backend_counts || {}).length}</strong></div>
+  `;
+
+            // Traffic Flow Bars
+            const row = document.getElementById('barsRow');
+            const counts = data.backend_counts || {};
+            const ports = Object.keys(counts).sort();
+            if (ports.length > 0) {
+                row.innerHTML = '';
+                const maxVal = Math.max(...Object.values(counts));
+                document.getElementById('highLoadBadge').style.display = maxVal > 0 ? 'flex' : 'none';
+
+                ports.forEach(p => {
+                    const val = counts[p];
+                    const isLeader = val === maxVal && val > 0;
+                    const h = Math.max(4, (val / (maxVal || 1)) * 140);
+
+                    const g = document.createElement('div'); g.className = 'bgrp';
+                    const bar = document.createElement('div');
+                    bar.className = 'bar ' + (isLeader ? 'bar-green' : 'bar-blue');
+                    bar.style.height = h + 'px';
+                    const bv = document.createElement('div'); bv.className = 'bval'; bv.textContent = val.toLocaleString();
+                    bar.appendChild(bv);
+                    const lbl = document.createElement('div');
+                    lbl.className = 'blbl' + (isLeader ? ' hl' : '');
+                    lbl.textContent = 'PORT\n' + p;
+                    g.appendChild(bar); g.appendChild(lbl);
+                    row.appendChild(g);
+                });
+            }
+
+            // Logs
+            const term = document.getElementById('termBody');
+            if (data.recent_logs && data.recent_logs.length > 0) {
+                term.innerHTML = '';
+                data.recent_logs.forEach(log => {
+                    const div = document.createElement('div');
+                    div.className = 'tl';
+                    const level = log.includes('❌') ? 'ERROR' : (log.includes('⚠️') ? 'WARN' : 'INFO');
+                    const cls = level === 'ERROR' ? 'te' : (level === 'WARN' ? 'tw' : 'ti');
+                    const ts = `[${new Date().toLocaleTimeString()}]`;
+                    div.innerHTML = `<span class="ts">${ts}</span> <span class="${cls}">${level}:</span><span class="tn"> ${log}</span>`;
+                    term.appendChild(div);
+                });
+                term.scrollTop = term.scrollHeight;
+            }
+        }
+
+        // --- Interaction Actions ---
+        async function runTest() {
+            const btn = document.getElementById('loadBtn');
+            btn.disabled = true; btn.innerText = "FIRING...";
+            try {
+                const res = await fetch(apiBase + 'run-test', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        url: 'http://localhost:8080',
+                        requests: document.getElementById('requests').value,
+                        concurrency: document.getElementById('concurrency').value
+                    })
+                });
+                const data = await res.json();
+                const out = document.getElementById('scOut');
+                out.innerHTML = `<div class="so-green">STRESS TEST COMPLETE</div>
+                     <div class="so-dim">RPS: ${data.rps.toFixed(1)} | Duration: ${data.duration.toFixed(2)}s</div>`;
+            } catch (e) { alert("Test failed"); }
+            finally { btn.disabled = false; btn.innerText = "STRESS TEST"; }
+        }
+
+        async function scanPorts() {
+            const btn = document.getElementById('scanBtn');
+            btn.disabled = true;
+            const out = document.getElementById('scOut');
+            out.innerHTML = '<div class="so-dim">Scanning target...</div>';
+            try {
+                const res = await fetch(apiBase + 'scan-ports', {
+                    method: 'POST',
+                    body: JSON.stringify({ host: document.getElementById('scanHost').value })
+                });
+                const data = await res.json();
+                out.innerText = data.output;
+            } catch (e) { out.innerText = "Scan Error"; }
+            finally { btn.disabled = false; }
+        }
+
+        async function uploadStrategy() {
+            const btn = document.getElementById('uploadBtn');
+            const spinner = document.getElementById('uploadSpinner');
+            btn.disabled = true; spinner.style.display = 'inline-block';
+            try {
+                const res = await fetch(apiBase + 'upload-strategy', {
+                    method: 'POST',
+                    body: JSON.stringify({ code: document.getElementById('stratCode').value })
+                });
+                const data = await res.json();
+                alert(data.status);
+            } catch (e) { alert("Upload failed"); }
+            finally { btn.disabled = false; spinner.style.display = 'none'; }
+        }
+
+        // Init
+        loadTemplate();
+        checkEnvironment();
+        fetchLocalIp();
+        setInterval(fetchStats, 1000);
+        fetchStats();
+
+        // Fill dot visualizer with static pattern
+        (function staticDots() {
+            const viz = document.getElementById('dotViz');
+            for (let i = 0; i < 40; i++) {
+                const col = document.createElement('div'); col.className = 'dv-col';
+                if (i < 25) {
+                    const dot = document.createElement('div'); dot.className = 'dv-dot dv-dot-g';
+                    col.appendChild(dot);
+                } else {
+                    const x = document.createElement('div'); x.className = 'dv-x'; x.textContent = '×';
+                    col.appendChild(x);
+                }
+                viz.appendChild(col);
+            }
+        })();
+    </script>
+</body>
+
+</html>
